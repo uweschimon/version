@@ -1,0 +1,30 @@
+#!/bin/sh
+# 4a2488810ca1c792529bc8988c08b12c
+# uwe.schimon@mailpost.de 20211208 09 10
+# set -x
+BACKUP=backup
+echo -n "[-s|--source]= [-b|--backup]=" > args.usage
+. /usr/local/bin/cargs
+. ./args.sh
+args $@
+
+text=`file "$S" | grep text`
+mkdir -p "$BACKUP"
+b="$BACKUP/${S##*/}."
+s=`date +%s`
+
+ if [ "$text" ]; then                   # script
+  cp "$S" "$b$s"                        # backup with seconds attached
+  if [ -e "$b$s" ]; then                # if backup exists
+   m0=`grep  '^# [0-9a-f]*$' "$b$s"`    # look for a existing hash
+   m1=`grep -v '^# [0-9a-f]*$' "$b$s" > x; md5sum x | cut -d " " -f1 | xargs echo "#"`  # create a new hash
+   if [ -z "$m0" ]; then                # if no hash in file
+    l=`wc -l<$b`;r=$((l-1));head -1 "$b$s">"$S"; echo $m1>>"$S";tail -$r "$b$s">>"$S"   # insert the new hash
+   else
+    sed "s/$m0/$m1/" "$b$s">"$S"        # if hash in file, replace with new hash
+   fi
+  fi
+ else
+  $h=`md5sum "$S" | cut -d " " -f1`
+  cp -f "$S" "$b$h"                     # binary (no-text), backup with hash attached
+ fi
